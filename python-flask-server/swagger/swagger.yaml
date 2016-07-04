@@ -1,0 +1,122 @@
+swagger: '2.0'
+info:
+  description: vIAP | AWS SNS Management for autoscaling.
+  version: "0.1"
+  title: SNS Gateway
+basePath: /v1
+schemes:
+ - http
+produces:
+ - application/json
+ - application/problem+json
+consumes:
+ - application/json
+paths:
+  /sns/:
+    post:
+      tags:
+      - aws-sns-controller
+      description: SNS Messages
+      operationId: controllers.aws_controller.sns_post
+      parameters:
+      - name: x-amz-sns-message-type
+        in: header
+        description: The type of message
+        required: false
+        type: string
+        default: Notification
+        enum:
+        - SubscriptionConfirmation
+        - Notification
+        - UnsubscribeConfirmation
+      - name: x-amz-sns-message-id
+        in: header
+        description: A Universally Unique Identifier, unique for each message published. For a notification that Amazon SNS resends during a retry, the messageID of the original message is used.
+        required: false
+        type: string
+      - name: x-amz-sns-topic-arn
+        in: header
+        description: "The Amazon Resource Name (ARN) for the topic that this message was published to."
+        required: false
+        type: string
+      - name: x-amz-sns-subscription-arn
+        in: header
+        description: "The ARN for the subscription to this endpoint."
+        required: false
+        type: string
+      - in: body
+        name: snsMessage
+        required: true
+        schema:
+          $ref: "#/definitions/snsMessage"
+      responses:
+        200:
+          description: "Successful subscription"
+        400:
+          description: "Bad request, see the doc"
+        404:
+          description: "Missing page or we try to fetch a missing arg. See error message for more"
+        500:
+          description: "la mierda"
+
+definitions:
+  snsMessage:
+    properties:
+      Message:
+        type: string
+        description: "A string that describes the message"
+        minLength: 1
+        maxLength: 4096
+      MessageId:
+        type: string
+        description: "A Universally Unique Identifier, unique for each message published. For a message that Amazon SNS resends during a retry, the message ID of the original message is used."
+      Signature:
+        type: "string"
+        description: "Base64-encoded \"SHA1withRSA\" signature of the Message, MessageId, Type, Timestamp, and TopicArn values."
+      SignatureVersion:
+        type: integer
+        description: "Version of the Amazon SNS signature used."
+        minimum: 1.0
+        default: 1.0
+      SigningCertURL:
+        type: string
+        pattern: '^https?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+        description: "The URL to the certificate that was used to sign the message."
+      Timestamp:
+        type: string
+        description: "The time (GMT) when the subscription confirmation was sent."
+      Token:
+        type: string
+        description: "A value you can use with the ConfirmSubscription action to confirm the subscription. Alternatively, you can simply visit the SubscribeURL."
+      SubscribeUrl:
+        type: string
+        description: "The URL that you must visit in order to confirm the subscription. Alternatively, you can instead use the Token with the ConfirmSubscription action to confirm the subscription."
+        pattern: '^https?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+      TopicArn:
+        type: string
+        description: "The Amazon Resource Name (ARN) for the topic that this endpoint is subscribed to."
+        maxLength: 1224
+      Type:
+        type: string
+        enum:
+        - SubscriptionConfirmation
+        - Notification
+        - UnsubscribeConfirmation
+        default: Notification
+    required:
+      - Message
+      - MessageId
+      - Timestamp
+      - TopicArn
+      - Type
+    example:
+      SignatureVersion: 1
+      Timestamp: 2016-06-22T19:37:53.582Z
+      Signature: M3H4jkktVOymzfJ9YJXkBgz2y9/g/yWRz8Sp/r3qs0PxhY2feqPgiiVUCx/GF97SMXTPiu3s/MR9gpoy+scto8rny/MUwN5ETU8j5hoVTAAeBWPnWBswdyaxLvrWCbikdbdpXcJIFrmFdYzsZwTSZnN9NIMytPND3t5ESIbf1s8btL3pknyeXppiK0XhpqFrMKQIkGllR21xxeLk4pd6q+jiyFs4d1FCmakd1pnXfspyjuBgxKnnbKZLH3n3S9zrTWB6nczwG6f1MZwLIzzchMr5ym8jfYlR2PsG+TbkKa86U5d5F7XwiMHsUY2RRNFM3ioMHgkvzjxhRLRtuse0WQ==
+      SubscribeURL: "https://sns.eu-west-1.amazonaws.com/?Action=ConfirmSubscription&TopicArn=arn:aws:sns:eu-west-1:571618648956:my-sns-topic&Token=2336412f37fb687f5d51e6e241d44a2cb2eea4cfa2b2d8bb88ae4e1dcf585d46b793671598a2ec02c2d6476abddd3e35a21b1f8bfc8913222415f863215cb0eeb1672ffd93b8356d6db43c82da496fbe1e24dbea80e308c8cb6f5a0de2bd3ceabef7d7db1552165048b786319fc8e6ba"
+      Token: 2336412f37fb687f5d51e6e241d44a2cb2eea4cfa2b2d8bb88ae4e1dcf585d46b793671598a2ec02c2d6476abddd3e35a21b1f8bfc8913222415f863215cb0eeb1672ffd93b8356d6db43c82da496fbe1e24dbea80e308c8cb6f5a0de2bd3ceabef7d7db1552165048b786319fc8e6ba
+      SigningCertURL: https://sns.eu-west-1.amazonaws.com/SimpleNotificationService-bb750dd426d95ee9390147a5624348ee.pem
+      MessageId: e092854f-84a6-41dd-b84f-cbc1c42fcfa4
+      Message: "You have chosen to subscribe to the topic arn:aws:sns:eu-west-1:571618648956:my-sns-topic.\nTo confirm the subscription, visit the SubscribeURL included in this message."
+      Type: SubscriptionConfirmation
+      TopicArn: arn:aws:sns:eu-west-1:571618648956:my-sns-topic
