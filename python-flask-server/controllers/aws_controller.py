@@ -74,15 +74,21 @@ The swagger model ensure that snsMessage exists and its format. So there is no e
 '''
 def sns_post( snsMessage ):
 
-	if connexion.request.headers['Content-Type'] == 'application/text':
+	#if connexion.request.headers['Content-Type'] == 'text/plain':
+	if not snsMessage:
  		logger.info( "Fù^$ you AWS! This is JSON inside!")
  		snsMessage = connexion.request.get_json(force=True)
 
-	#logger.debug( connexion.request.headers )
+	logger.debug( connexion.request.headers )
 	#logger.debug( connexion.request.data )
 	#logger.debug( connexion.request.json )
 
+        #logger.debug( snsMessage )
+
+        #logger.debug( type( snsMessage) )
+
 	if not 'Type' in snsMessage:	
+                log.debug( "Type ")
 		return connexion.problem( 400, "Format error", "No message Type specified" )
 
 	'''
@@ -95,13 +101,16 @@ def sns_post( snsMessage ):
 
 	# Step 1: Check if we have a signature
 	if not 'Signature' in snsMessage:
+                logger.debug( "Signature")
 		return connexion.problem( 400, "Signature error", "Message has no signature" )
 
-	if not 'SignatureVersion' in snsMessage or snsMessage['SignatureVersion'] != 1:
+	if not 'SignatureVersion' in snsMessage or int(snsMessage['SignatureVersion']) != 1:
+                logger.debug( "SignatureVersion: %s" % snsMessage['SignatureVersion'])
 		return connexion.problem( 400, "Signature error", "Unsupported signature version" )
 	
 	# Step 2: Get the certificate
 	if not 'SigningCertURL' in snsMessage:
+                logger.debug( "SignURL")
 		return connexion.problem( 400, "Signature error", "No certificate specified." )
 	else:
 		# Will need to add a check on hostname sns...amazonaws.com
@@ -119,6 +128,7 @@ def sns_post( snsMessage ):
 				"Unable to fetch certificate %s" % snsMessage['SigningCertURL'] )
 	
 	awsCertificate = crypto.load_certificate( crypto.FILETYPE_PEM, r.text)
+        logger.debug( "certificat charge" )
 
 	# Step 3: Get the public key
 	#awsPubKey = awsCertificate.get_pubkey()
@@ -140,11 +150,10 @@ def sns_post( snsMessage ):
 		return connexion.problem( 400, "Signature error", "Unable to decode signature." )
 
 	# Step 7-9: compare
-	crypto.verify( awsCertificate, awsSignature, myMessage, b'sha1')
-
 	try:
-		verify = crypto.verify( awsCertificate, awsSignature, myMessage, b'sha1')
+		crypto.verify( awsCertificate, awsSignature, myMessage, b'sha1')
 	except:
+                logger.debug( "echec crypto" )
 		return connexion.problem( 401, "Signature error", "Signature doesn't match." )
 
 	return {
