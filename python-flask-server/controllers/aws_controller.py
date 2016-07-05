@@ -72,11 +72,10 @@ The swagger model ensure that snsMessage exists and its format. So there is no e
 '''
 def sns_post( snsMessage ):
 
-	if not 'Type' in snsMessage:
-			return "No message type specified", 400
-
 	logger.debug('Message received:\n---\n%s\n---\n' % snsMessage)
-	
+
+	if not 'Type' in snsMessage:	
+		return connexion.problem( 400, "Format error", "No message Type specified" )
 
 	'''
 	Verify SNS message signature to ensure they are from AWS.
@@ -95,7 +94,7 @@ def sns_post( snsMessage ):
 	
 	# Step 2: Get the certificate
 	if not 'SigningCertURL' in snsMessage:
-		return connexion.problem( 400, "Signature error", "No (public) certificate specified." )
+		return connexion.problem( 400, "Signature error", "No certificate specified." )
 	else:
 		# Will need to add a check on hostname sns...amazonaws.com
 		if not re.match( '^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
@@ -103,47 +102,40 @@ def sns_post( snsMessage ):
 			return connexion.problem( 400, "Signature error",
 				"'%s' is not a valid SigningCertURL" % snsMessage['SigningCertURL'])
 
-		# Get certificate (and put it in cache one day...)
-		try:
-			r = requests.get( snsMessage['SigningCertURL'])
-		except:
-			logger.error( 'Unable to fetch certificate: ' + snsMessage['SigningCertURL'])
-			return connexion.problem( 404, "Signature error",
-					"Unable to fetch certificate %s" % snsMessage['SigningCertURL'] )
+	# Get certificate (and put it in cache one day...)
+	try:
+		r = requests.get( snsMessage['SigningCertURL'])
+	except:
+		logger.error( 'Unable to fetch certificate: ' + snsMessage['SigningCertURL'])
+		return connexion.problem( 404, "Signature error",
+				"Unable to fetch certificate %s" % snsMessage['SigningCertURL'] )
 	
-	#logger.debug( r.text)
 	awsCertificate = crypto.load_certificate( crypto.FILETYPE_PEM, r.text)
 
-	# Step 3: Get the public key (useless?)
-	awsPubKey = awsCertificate.get_pubkey()
+	# Step 3: Get the public key
+	#awsPubKey = awsCertificate.get_pubkey()
 
 	# Step 4: Determine type of message
 	# Step 5: Build the string to sign
-
 	myMessage = ''
 	for name in [ 'Message', 'MessageId',  'Subject', 'SubscribeURL', 'Timestamp', 'Token',
 			'TopicArn', 'Type']:
 		if name in snsMessage:
 			myMessage += '%s\n%s\n' % (name, snsMessage[name])
 
-	#myMessage = myMessage.rstrip()
+	#logger.debug( 'Message a signer:\n---\n%s---\n' % myMessage)
 
-	#logger.debug( 'Message a signer:\n---\n%s\n---\n' % myMessage)
-
-	# Step 6: Decode the Signature (binary)
+	# Step 6: Decode the Signature
 	try: 
 		awsSignature = b64decode( snsMessage['Signature'])
 	except:
-		return connexion.problem( 400, "Signature error", "Unable to decode signature." )	
+		return connexion.problem( 400, "Signature error", "Unable to decode signature." )
 
-	# Step 7: generate derivated hash
-	# Step 8: generate asserted hash
-	
-	# Step 9: compare
+	# Step 7-9: compare
 	crypto.verify( awsCertificate, awsSignature, myMessage, b'sha1')
 
 	try:
-		verify = crypto.verify( awsPubKey, awsSignature, myMessage, b'sha1')
+		verify = crypto.verify( awsCertificate, awsSignature, myMessage, b'sha1')
 	except:
 		return connexion.problem( 401, "Signature error", "Signature doesn't match." )
 
