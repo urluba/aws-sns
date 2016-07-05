@@ -7,6 +7,8 @@ import connexion
 import logging
 import re
 
+from flask import jsonify
+
 from OpenSSL import crypto
 from base64 import b64decode
 #import boto3 # AWS SDK - https://boto3.readthedocs.io/en/latest/
@@ -72,7 +74,13 @@ The swagger model ensure that snsMessage exists and its format. So there is no e
 '''
 def sns_post( snsMessage ):
 
-	logger.debug('Message received:\n---\n%s\n---\n' % snsMessage)
+	if connexion.request.headers['Content-Type'] == 'application/text':
+ 		logger.info( "Fù^$ you AWS! This is JSON inside!")
+ 		snsMessage = connexion.request.get_json(force=True)
+
+	#logger.debug( connexion.request.headers )
+	#logger.debug( connexion.request.data )
+	#logger.debug( connexion.request.json )
 
 	if not 'Type' in snsMessage:	
 		return connexion.problem( 400, "Format error", "No message Type specified" )
