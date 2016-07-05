@@ -59,7 +59,7 @@ def _SubscriptionConfirmation(  snsMessage):
 		return connexion.problem( 404, "Subscription error", "Unable to fetch: '%s'" % subUrl)
 
 	logger.debug( 'And got... %s' % r)
-	return "SubscriptionConfirmation"
+	return connexion.problem( 200, "Subscription success", "Subscription done.")
 
 '''
 '''
@@ -113,9 +113,8 @@ def sns_post( snsMessage ):
                 logger.debug( "SignURL")
 		return connexion.problem( 400, "Signature error", "No certificate specified." )
 	else:
-		# Will need to add a check on hostname sns...amazonaws.com
-		if not re.match( '^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
-					snsMessage['SigningCertURL']):
+		#if not re.match( '^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\.pem$',
+		if not re.match( '^http[s]?://sns\.[a-zA-Z0-9\-]{3,}\.amazonaws\.com(\.cn)?\/[a-zA-Z0-9-]{1,}\.pem$', snsMessage['SigningCertURL']):
 			return connexion.problem( 400, "Signature error",
 				"'%s' is not a valid SigningCertURL" % snsMessage['SigningCertURL'])
 
