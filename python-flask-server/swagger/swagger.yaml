@@ -15,7 +15,7 @@ paths:
   /sns/:
     post:
       consumes:
-       - application/text
+       - text/plain
       tags:
       - aws-sns-controller
       description: SNS Messages
